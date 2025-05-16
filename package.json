@@ -1,0 +1,25 @@
+{
+  "name": "seq-lead-keys",
+  "version": "1.0.0",
+  "description": "A library for listening to command key sequences",
+  "main": "src/js/index.js",
+  "scripts": {
+    "install": "node-gyp rebuild",
+    "test": "jest",
+    "build:cli": "gcc -Wall -Wextra -framework ApplicationServices -framework CoreFoundation -o build/seq-lead-keys src/native/cmd.c src/native/seq_lead_keys.c src/native/command_tree.c src/native/parse_args.c"
+  },
+  "keywords": [
+    "keyboard",
+    "shortcuts",
+    "macos"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "node-addon-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "gypfile": true
+}

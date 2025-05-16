@@ -1,46 +1,86 @@
-## Seq-Lead-Keys
+# seq-lead-keys
 
-**Seq-Lead-Keys** is a lightweight macOS utility that lets you bind and trigger custom command sequences via a double-Command key press.
+A library for listening to command key sequences on macOS.
 
-### 🔧 Requirements
-
-- macOS
-- Xcode Command Line Tools
-- Accessibility permissions (for global keyboard monitoring)
-
-### 🚀 Installation & Build
+## Installation
 
 ```bash
-make clean && make
+npm install seq-lead-keys
 ```
 
-### ⚙️ Usage
+## Usage
+
+### As a Node.js module
+
+```javascript
+const SeqLeadKeys = require("seq-lead-keys");
+
+const keyListener = new SeqLeadKeys();
+keyListener.addCommand("abc");
+keyListener.addCommand("xyz");
+keyListener.start();
+
+// Later, when you want to stop:
+keyListener.stop();
+```
+
+### As a command-line tool
 
 ```bash
-./seq-lead-keys -c <sequence> [-c <sequence> …]
+# Build the command-line tool
+npm run build:cli
+
+# Run the tool
+./build/seq-lead-keys -c abc -c xyz
 ```
 
-- **-c**, **--command** `<sequence>`  
-  Define one or more key sequences to listen for.
+## Development
 
-### 🔍 Operation
+### Project Structure
 
-1. Quickly press ⌘ twice to enter “listen” mode.
-2. Type your predefined sequence.
-3. If it matches, the corresponding action fires.
+```
+├── binding.gyp              # node-gyp build description
+├── package.json             # npm metadata & scripts
+├── README.md
+├── .gitignore
+│
+├── src/
+│   ├── native/              # all C/C++ code lives here
+│   │   ├── addon.c          # entry point: N-API module registration
+│   │   ├── seq_lead_keys.c  # core library implementation
+│   │   ├── seq_lead_keys.h  # library header
+│   │   ├── command_tree.c   # command tree implementation
+│   │   ├── command_tree.h   # command tree header
+│   │   ├── parse_args.c     # command-line argument parsing
+│   │   ├── parse_args.h     # argument parsing header
+│   │   └── cmd.c            # command-line interface
+│   │
+│   └── js/                  # JS "wrapper" code lives here
+│       └── index.js         # exports & high-level API
+│
+└── test/
+    └── test.js              # unit tests
+```
 
-### 🛠 Troubleshooting
+### Building
 
-> **“Failed to create event tap. Check Accessibility permissions”**
->
-> 1. System Preferences → Security & Privacy → Privacy → Accessibility
-> 2. Unlock and add Terminal (or the `seq-lead-keys` binary).
+```bash
+# Install dependencies
+npm install
 
-### 📂 Project Layout
+# Build the Node.js addon
+npm run install
 
-- **seq-lead-keys.c** — Core event loop & logic
-- **command_tree.c / .h** — Sequence-matching engine
+# Build the command-line tool
+npm run build:cli
+```
 
----
+### Testing
 
-**License:** MIT
+```bash
+npm test
+```
+
+## License
+
+MIT

@@ -1,3 +1,9 @@
+node_modules/
+build/
 .DS_Store
+*.o
+*.node
+*.log
+coverage/
 .vscode
 bin/seq-lead-keys
