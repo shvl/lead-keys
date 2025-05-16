@@ -5,6 +5,9 @@
 static napi_value AddCommand(napi_env env, napi_callback_info info);
 static napi_value Start(napi_env env, napi_callback_info info);
 static napi_value Stop(napi_env env, napi_callback_info info);
+static napi_value SetLeadCallback(napi_env env, napi_callback_info info);
+static napi_value SetPartialCallback(napi_env env, napi_callback_info info);
+static napi_value SetCompleteCallback(napi_env env, napi_callback_info info);
 
 static napi_value Init(napi_env env, napi_value exports) {
     napi_value fn;
@@ -49,6 +52,42 @@ static napi_value Init(napi_env env, napi_value exports) {
     status = napi_set_named_property(env, exports, "stop", fn);
     if (status != napi_ok) {
         napi_throw_error(env, NULL, "Failed to set stop property");
+        return NULL;
+    }
+
+    // Set lead callback function
+    status = napi_create_function(env, NULL, 0, SetLeadCallback, NULL, &fn);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to create setLeadCallback function");
+        return NULL;
+    }
+    status = napi_set_named_property(env, exports, "setLeadCallback", fn);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to set setLeadCallback property");
+        return NULL;
+    }
+
+    // Set partial callback function
+    status = napi_create_function(env, NULL, 0, SetPartialCallback, NULL, &fn);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to create setPartialCallback function");
+        return NULL;
+    }
+    status = napi_set_named_property(env, exports, "setPartialCallback", fn);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to set setPartialCallback property");
+        return NULL;
+    }
+
+    // Set complete callback function
+    status = napi_create_function(env, NULL, 0, SetCompleteCallback, NULL, &fn);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to create setCompleteCallback function");
+        return NULL;
+    }
+    status = napi_set_named_property(env, exports, "setCompleteCallback", fn);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to set setCompleteCallback property");
         return NULL;
     }
 
@@ -99,6 +138,46 @@ static napi_value Start(napi_env env, napi_callback_info info) {
 
 static napi_value Stop(napi_env env, napi_callback_info info) {
     seq_lead_keys_stop();
+    return NULL;
+}
+
+static napi_value SetLeadCallback(napi_env env, napi_callback_info info) {
+    napi_status status;
+    size_t argc = 1;
+    napi_value args[1];
+    napi_value cb;
+
+    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to parse arguments");
+        return NULL;
+    }
+
+    if (argc < 1) {
+        napi_throw_error(env, NULL, "Wrong number of arguments");
+        return NULL;
+    }
+
+    status = napi_get_undefined(env, &cb);
+    if (status != napi_ok) {
+        napi_throw_error(env, NULL, "Failed to create undefined value");
+        return NULL;
+    }
+
+    // TODO: Implement proper callback handling
+    // For now, we'll just set a simple callback that does nothing
+    seq_lead_keys_set_lead_callback(NULL);
+
+    return cb;
+}
+
+static napi_value SetPartialCallback(napi_env env, napi_callback_info info) {
+    // Implementation needed
+    return NULL;
+}
+
+static napi_value SetCompleteCallback(napi_env env, napi_callback_info info) {
+    // Implementation needed
     return NULL;
 }
 

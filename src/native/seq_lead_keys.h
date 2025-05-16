@@ -16,6 +16,9 @@ void seq_lead_keys_stop(void);
 // Add a command sequence to listen for
 bool seq_lead_keys_add_command(const char* sequence);
 
+// Set callback for when lead key sequence is activated
+void seq_lead_keys_set_lead_callback(void (*callback)(void));
+
 // Set callback for when a partial sequence is detected
 void seq_lead_keys_set_partial_callback(void (*callback)(const char* sequence));
 

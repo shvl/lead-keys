@@ -4,6 +4,11 @@
 #include "seq_lead_keys.h"
 #include "parse_args.h"
 
+static void on_lead_sequence(void) {
+    printf("LEAD SEQUENCE ACTIVATED\n");
+    fflush(stdout);
+}
+
 static void on_partial_sequence(const char* sequence) {
     printf("SEQUENCE DETECTED: %s\n", sequence);
     fflush(stdout);
@@ -48,6 +53,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Set up callbacks
+    seq_lead_keys_set_lead_callback(on_lead_sequence);
     seq_lead_keys_set_partial_callback(on_partial_sequence);
     seq_lead_keys_set_complete_callback(on_complete_sequence);
 

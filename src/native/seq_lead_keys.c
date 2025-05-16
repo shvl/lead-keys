@@ -22,6 +22,7 @@ static CFMachPortRef tap = NULL;
 static CFRunLoopSourceRef src = NULL;
 
 // Callbacks
+static void (*lead_callback)(void) = NULL;
 static void (*partial_callback)(const char*) = NULL;
 static void (*complete_callback)(const char*) = NULL;
 
@@ -55,6 +56,9 @@ static CGEventRef callback(CGEventType type, CGEventRef event) {
                     current_node = command_tree;
                     sequence_length = 0;
                     current_sequence[0] = '\0';
+                    if (lead_callback) {
+                        lead_callback();
+                    }
                 }
             }
         }
@@ -114,8 +118,6 @@ bool seq_lead_keys_start(void) {
         return false;
     }
 
-    printf("seq_lead_keys_start\n");
-
     CGEventMask mask = CGEventMaskBit(kCGEventFlagsChanged) | CGEventMaskBit(kCGEventKeyDown);
     tap = CGEventTapCreate(
         kCGHIDEventTap,
@@ -126,8 +128,6 @@ bool seq_lead_keys_start(void) {
         NULL
     );
 
-    printf("tap: %p\n", tap);
-
     if (!tap) {
         return false;
     }
@@ -135,8 +135,6 @@ bool seq_lead_keys_start(void) {
     src = CFMachPortCreateRunLoopSource(NULL, tap, 0);
     CFRunLoopAddSource(CFRunLoopGetCurrent(), src, kCFRunLoopCommonModes);
     CGEventTapEnable(tap, true);
-
-    printf("src: %p\n", src);
 
     return true;
 }
@@ -162,6 +160,10 @@ bool seq_lead_keys_add_command(const char* sequence) {
     }
     add_command_sequence(command_tree, sequence);
     return true;
+}
+
+void seq_lead_keys_set_lead_callback(void (*callback)(void)) {
+    lead_callback = callback;
 }
 
 void seq_lead_keys_set_partial_callback(void (*callback)(const char* sequence)) {

@@ -1,8 +1,23 @@
 const addon = require("./build/Release/seq-lead-keys.node");
+const EventEmitter = require("events");
 
-class SeqLeadKeys {
+class SeqLeadKeys extends EventEmitter {
   constructor() {
+    super();
     this._addon = addon;
+
+    // Set up event handlers for the native addon
+    this._addon.setLeadCallback((sequence) => {
+      this.emit("lead", sequence);
+    });
+
+    this._addon.setPartialCallback((sequence) => {
+      this.emit("command-partial", sequence);
+    });
+
+    this._addon.setCompleteCallback((sequence) => {
+      this.emit("command", sequence);
+    });
   }
 
   addCommand(sequence) {
@@ -13,7 +28,8 @@ class SeqLeadKeys {
   }
 
   start() {
-    return this._addon.start();
+    this._addon.start();
+    return this;
   }
 
   stop() {
