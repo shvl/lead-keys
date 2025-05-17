@@ -1,6 +1,6 @@
-const addon = require("./build/Release/seq-lead-keys.node");
+const addon = require("../../build/Release/seq-lead-keys.node");
 const EventEmitter = require("events");
-
+// abc
 class SeqLeadKeys extends EventEmitter {
   constructor() {
     super();
@@ -28,7 +28,17 @@ class SeqLeadKeys extends EventEmitter {
   }
 
   start() {
-    this._addon.start();
+    new Promise((resolve) => {
+      this._addon.start();
+      resolve();
+    });
+    return this;
+  }
+
+  runInThread() {
+    if (!this._addon.runInThread()) {
+      throw new Error("Failed to start event loop in separate thread");
+    }
     return this;
   }
 

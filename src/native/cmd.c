@@ -75,9 +75,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("Listening for command sequences...\n");
-    CFRunLoopRun();
-
     // Cleanup
     seq_lead_keys_cleanup();
     free_parsed_args(&args);

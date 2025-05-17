@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ApplicationServices/ApplicationServices.h>
+#include <pthread.h>
 #include "seq_lead_keys.h"
 
 #define DOUBLE_CMD_INTERVAL 2.0
@@ -25,6 +26,9 @@ static CFRunLoopSourceRef src = NULL;
 static void (*lead_callback)(void) = NULL;
 static void (*partial_callback)(const char*) = NULL;
 static void (*complete_callback)(const char*) = NULL;
+
+static pthread_t event_thread;
+static bool thread_running = false;
 
 // Reset all state variables to their initial values
 static void reset_state(void) {
@@ -63,39 +67,44 @@ static CGEventRef callback(CGEventType type, CGEventRef event) {
             }
         }
     }
-    else if (type == kCGEventKeyDown && prefix_active) {
-        UniChar buf[4];
-        UniCharCount len = 0;
-        CGEventKeyboardGetUnicodeString(event, 4, &len, buf);
-        if (len == 0) {
-            reset_state();
-            return event;
-        }
-        char ch = (char)buf[0];
+    else if (type == kCGEventKeyDown) {
+        if (prefix_active) {
+            UniChar buf[4];
+            UniCharCount len = 0;
+            CGEventKeyboardGetUnicodeString(event, 4, &len, buf);
+            if (len == 0) {
+                reset_state();
+                return event;
+            }
+            char ch = (char)buf[0];
 
-        if (current_node) {
-            CommandNode* next = find_child(current_node, ch);
-            if (next) {
-                current_node = next;
-                if (sequence_length < MAX_SEQUENCE_LENGTH - 1) {
-                    current_sequence[sequence_length++] = ch;
-                    current_sequence[sequence_length] = '\0';
-                    if (partial_callback) {
-                        partial_callback(current_sequence);
+            if (current_node) {
+                CommandNode* next = find_child(current_node, ch);
+                if (next) {
+                    current_node = next;
+                    if (sequence_length < MAX_SEQUENCE_LENGTH - 1) {
+                        current_sequence[sequence_length++] = ch;
+                        current_sequence[sequence_length] = '\0';
+                        if (partial_callback) {
+                            partial_callback(current_sequence);
+                        }
                     }
-                }
-                
-                if (current_node->is_terminal) {
-                    if (complete_callback) {
-                        complete_callback(current_sequence);
+                    
+                    if (current_node->is_terminal) {
+                        if (complete_callback) {
+                            complete_callback(current_sequence);
+                        }
+                        reset_state();
+                        return NULL;
                     }
-                    reset_state();
                     return NULL;
                 }
-                return NULL;
             }
+            reset_state();
+        } else {
+            // reset state if not in prefix mode to not activate lead on cmd-c cmd 
+            reset_state();
         }
-        reset_state();
     }
 
     return event;
@@ -106,6 +115,26 @@ static CGEventRef event_callback(CGEventTapProxy proxy __attribute__((unused)),
                                CGEventRef event, 
                                void *refcon __attribute__((unused))) {
     return callback(type, event);
+}
+
+static void* event_loop_thread() {
+    CFRunLoopRun();
+    return NULL;
+}
+
+bool seq_lead_keys_run_in_thread(void) {
+    if (thread_running) {
+        return false;
+    }
+
+    thread_running = true;
+    int result = pthread_create(&event_thread, NULL, event_loop_thread, NULL);
+    if (result != 0) {
+        thread_running = false;
+        return false;
+    }
+
+    return true;
 }
 
 bool seq_lead_keys_init(void) {
@@ -136,6 +165,9 @@ bool seq_lead_keys_start(void) {
     CFRunLoopAddSource(CFRunLoopGetCurrent(), src, kCFRunLoopCommonModes);
     CGEventTapEnable(tap, true);
 
+    printf("Listening for command sequences...\n");
+    CFRunLoopRun();
+
     return true;
 }
 
@@ -151,6 +183,12 @@ void seq_lead_keys_stop(void) {
     if (tap) {
         CFRelease(tap);
         tap = NULL;
+    }
+    
+    if (thread_running) {
+        CFRunLoopStop(CFRunLoopGetCurrent());
+        pthread_join(event_thread, NULL);
+        thread_running = false;
     }
 }
 

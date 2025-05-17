@@ -1,0 +1,42 @@
+import robot from "robotjs";
+import SeqLeadKeys from "../src/js/index.js";
+
+const keyListener = new SeqLeadKeys();
+keyListener.addListener("command", (sequence) => {
+  console.log("command", sequence);
+  if (sequence === "c") {
+    // map to hotkey cmd+v
+    robot.keyTap("c", "command");
+  }
+  if (sequence === "v") {
+    // map to hotkey cmd+v
+    robot.keyTap("v", "command");
+  }
+  if (sequence === "abc") {
+    // map to hotkey cmd+shift+d
+    robot.keyTap("d", ["command", "shift"]);
+  }
+});
+
+keyListener.on("command-partial", (sequence) => {
+  console.log("command-partial", sequence);
+  console.log("command-partial", sequence);
+});
+
+keyListener.on("lead", () => {
+  console.log("lead activated");
+});
+
+keyListener.addCommand("c");
+keyListener.addCommand("v");
+keyListener.addCommand("abc");
+try {
+  keyListener.start();
+} catch (error) {
+  console.error(error);
+}
+
+while (true) {
+  console.log("waiting...");
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+}

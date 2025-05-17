@@ -28,4 +28,7 @@ void seq_lead_keys_set_complete_callback(void (*callback)(const char* sequence))
 // Clean up resources
 void seq_lead_keys_cleanup(void);
 
+// Run the event loop in a separate thread
+bool seq_lead_keys_run_in_thread(void);
+
 #endif // SEQ_LEAD_KEYS_H 

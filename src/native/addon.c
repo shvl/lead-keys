@@ -1,5 +1,77 @@
+// src/native/addon.c
+
 #include <node_api.h>
 #include "seq_lead_keys.h"
+
+// Global N-API state & callback references
+static napi_env  g_env;
+static napi_ref  g_lead_callback_ref   = NULL;
+static napi_ref  g_partial_callback_ref = NULL;
+static napi_ref  g_complete_callback_ref = NULL;
+
+// Helper: console.log from C
+#ifdef DEBUG
+static napi_value call_console_log(napi_env env, const char* str) {
+  napi_value global, console, log_fn, msg, result;
+  if (napi_get_global(env, &global) != napi_ok) return NULL;
+  if (napi_get_named_property(env, global, "console", &console) != napi_ok) return NULL;
+  if (napi_get_named_property(env, console, "log", &log_fn) != napi_ok) return NULL;
+  if (napi_create_string_utf8(env, str, NAPI_AUTO_LENGTH, &msg) != napi_ok) return NULL;
+  if (napi_call_function(env, console, log_fn, 1, &msg, &result) != napi_ok) return NULL;
+  return result;
+}
+#endif
+
+
+
+// Trampoline: C → JS
+static void on_lead_sequence(void) {
+  if (!g_lead_callback_ref) return;
+
+  napi_handle_scope scope;
+  napi_open_handle_scope(g_env, &scope);
+
+  napi_value js_cb, global;
+  napi_get_reference_value(g_env, g_lead_callback_ref, &js_cb);
+  napi_get_global(g_env, &global);
+  napi_call_function(g_env, global, js_cb, 0, NULL, NULL);
+
+  napi_close_handle_scope(g_env, scope);
+}
+
+// Trampoline: C → JS
+static void on_partial_sequence(const char* sequence) {
+  if (!g_partial_callback_ref) return;
+
+  napi_handle_scope scope;
+  napi_open_handle_scope(g_env, &scope);
+
+  napi_value js_cb, global, arg;
+  napi_get_reference_value(g_env, g_partial_callback_ref, &js_cb);
+  napi_get_global(g_env, &global);
+  // Create a JS string from the C sequence
+  napi_create_string_utf8(g_env, sequence, NAPI_AUTO_LENGTH, &arg);
+  napi_call_function(g_env, global, js_cb, 1, &arg, NULL);
+
+  napi_close_handle_scope(g_env, scope);
+}
+
+// Trampoline: C → JS
+static void on_complete_sequence(const char* sequence) {
+  if (!g_complete_callback_ref) return;
+
+  napi_handle_scope scope;
+  napi_open_handle_scope(g_env, &scope);
+
+  napi_value js_cb, global, arg;
+  napi_get_reference_value(g_env, g_complete_callback_ref, &js_cb);
+  napi_get_global(g_env, &global);
+  // Create a JS string from the C sequence
+  napi_create_string_utf8(g_env, sequence, NAPI_AUTO_LENGTH, &arg);
+  napi_call_function(g_env, global, js_cb, 1, &arg, NULL);
+
+  napi_close_handle_scope(g_env, scope);
+}
 
 // Forward declarations
 static napi_value AddCommand(napi_env env, napi_callback_info info);
@@ -9,176 +81,129 @@ static napi_value SetLeadCallback(napi_env env, napi_callback_info info);
 static napi_value SetPartialCallback(napi_env env, napi_callback_info info);
 static napi_value SetCompleteCallback(napi_env env, napi_callback_info info);
 
-static napi_value Init(napi_env env, napi_value exports) {
-    napi_value fn;
-    napi_status status;
+// Module init
+NAPI_MODULE_INIT() {
+  napi_value fn;
 
-    // Initialize the library
-    if (!seq_lead_keys_init()) {
-        napi_throw_error(env, NULL, "Failed to initialize key listener");
-        return NULL;
-    }
+  // Initialize C core
+  if (!seq_lead_keys_init()) {
+    napi_throw_error(env, NULL, "Failed to initialize key listener");
+    return NULL;
+  }
 
-    // Add command function
-    status = napi_create_function(env, NULL, 0, AddCommand, NULL, &fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create addCommand function");
-        return NULL;
-    }
-    status = napi_set_named_property(env, exports, "addCommand", fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to set addCommand property");
-        return NULL;
-    }
+  // Bind methods
+  napi_create_function(env, "addCommand", NAPI_AUTO_LENGTH, AddCommand, NULL, &fn);
+  napi_set_named_property(env, exports, "addCommand", fn);
 
-    // Start function
-    status = napi_create_function(env, NULL, 0, Start, NULL, &fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create start function");
-        return NULL;
-    }
-    status = napi_set_named_property(env, exports, "start", fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to set start property");
-        return NULL;
-    }
+  napi_create_function(env, "start", NAPI_AUTO_LENGTH, Start, NULL, &fn);
+  napi_set_named_property(env, exports, "start", fn);
 
-    // Stop function
-    status = napi_create_function(env, NULL, 0, Stop, NULL, &fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create stop function");
-        return NULL;
-    }
-    status = napi_set_named_property(env, exports, "stop", fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to set stop property");
-        return NULL;
-    }
+  napi_create_function(env, "stop", NAPI_AUTO_LENGTH, Stop, NULL, &fn);
+  napi_set_named_property(env, exports, "stop", fn);
 
-    // Set lead callback function
-    status = napi_create_function(env, NULL, 0, SetLeadCallback, NULL, &fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create setLeadCallback function");
-        return NULL;
-    }
-    status = napi_set_named_property(env, exports, "setLeadCallback", fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to set setLeadCallback property");
-        return NULL;
-    }
+  napi_create_function(env, "setLeadCallback", NAPI_AUTO_LENGTH, SetLeadCallback, NULL, &fn);
+  napi_set_named_property(env, exports, "setLeadCallback", fn);
 
-    // Set partial callback function
-    status = napi_create_function(env, NULL, 0, SetPartialCallback, NULL, &fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create setPartialCallback function");
-        return NULL;
-    }
-    status = napi_set_named_property(env, exports, "setPartialCallback", fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to set setPartialCallback property");
-        return NULL;
-    }
+  napi_create_function(env, "setPartialCallback", NAPI_AUTO_LENGTH, SetPartialCallback, NULL, &fn);
+  napi_set_named_property(env, exports, "setPartialCallback", fn);
 
-    // Set complete callback function
-    status = napi_create_function(env, NULL, 0, SetCompleteCallback, NULL, &fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create setCompleteCallback function");
-        return NULL;
-    }
-    status = napi_set_named_property(env, exports, "setCompleteCallback", fn);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to set setCompleteCallback property");
-        return NULL;
-    }
+  napi_create_function(env, "setCompleteCallback", NAPI_AUTO_LENGTH, SetCompleteCallback, NULL, &fn);
+  napi_set_named_property(env, exports, "setCompleteCallback", fn);
 
-    return exports;
+  return exports;
 }
 
+// addCommand(sequence): boolean
 static napi_value AddCommand(napi_env env, napi_callback_info info) {
-    napi_status status;
-    size_t argc = 1;
-    napi_value args[1];
-    char sequence[256];
-    size_t len;
+  size_t argc = 1;
+  napi_value args[1], result;
+  char sequence[256];
+  size_t len;
 
-    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to parse arguments");
-        return NULL;
-    }
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+  napi_get_value_string_utf8(env, args[0], sequence, sizeof(sequence), &len);
 
-    status = napi_get_value_string_utf8(env, args[0], sequence, sizeof(sequence), &len);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to get sequence string");
-        return NULL;
-    }
-
-    bool success = seq_lead_keys_add_command(sequence);
-    napi_value result;
-    status = napi_get_boolean(env, success, &result);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create result");
-        return NULL;
-    }
-
-    return result;
+  bool ok = seq_lead_keys_add_command(sequence);
+  napi_get_boolean(env, ok, &result);
+  return result;
 }
 
+// start(): boolean
 static napi_value Start(napi_env env, napi_callback_info info) {
-    napi_status status;
-    bool success = seq_lead_keys_start();
-    napi_value result;
-    status = napi_get_boolean(env, success, &result);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create result");
-        return NULL;
-    }
-    return result;
+  bool ok = seq_lead_keys_start();
+  napi_value result;
+  napi_get_boolean(env, ok, &result);
+  return result;
 }
 
+// stop(): void
 static napi_value Stop(napi_env env, napi_callback_info info) {
-    seq_lead_keys_stop();
-    return NULL;
+  seq_lead_keys_stop();
+  return NULL;
 }
 
+// setLeadCallback(cb): void
 static napi_value SetLeadCallback(napi_env env, napi_callback_info info) {
-    napi_status status;
-    size_t argc = 1;
-    napi_value args[1];
-    napi_value cb;
+  size_t argc = 1;
+  napi_value args[1], undefined;
+  napi_valuetype type;
 
-    status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to parse arguments");
-        return NULL;
-    }
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+  napi_typeof(env, args[0], &type);
+  if (type != napi_function) {
+    napi_throw_type_error(env, NULL, "Expected a function");
+    return NULL;
+  }
+  if (g_lead_callback_ref) napi_delete_reference(env, g_lead_callback_ref);
+  napi_create_reference(env, args[0], 1, &g_lead_callback_ref);
 
-    if (argc < 1) {
-        napi_throw_error(env, NULL, "Wrong number of arguments");
-        return NULL;
-    }
+  g_env = env;
+  seq_lead_keys_set_lead_callback(on_lead_sequence);
 
-    status = napi_get_undefined(env, &cb);
-    if (status != napi_ok) {
-        napi_throw_error(env, NULL, "Failed to create undefined value");
-        return NULL;
-    }
-
-    // TODO: Implement proper callback handling
-    // For now, we'll just set a simple callback that does nothing
-    seq_lead_keys_set_lead_callback(NULL);
-
-    return cb;
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
+// setPartialCallback(cb): void
 static napi_value SetPartialCallback(napi_env env, napi_callback_info info) {
-    // Implementation needed
+  size_t argc = 1;
+  napi_value args[1], undefined;
+  napi_valuetype type;
+
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+  napi_typeof(env, args[0], &type);
+  if (type != napi_function) {
+    napi_throw_type_error(env, NULL, "Expected a function");
     return NULL;
+  }
+  if (g_partial_callback_ref) napi_delete_reference(env, g_partial_callback_ref);
+  napi_create_reference(env, args[0], 1, &g_partial_callback_ref);
+
+  g_env = env;
+  seq_lead_keys_set_partial_callback(on_partial_sequence);
+
+  napi_get_undefined(env, &undefined);
+  return undefined;
 }
 
+// setCompleteCallback(cb): void
 static napi_value SetCompleteCallback(napi_env env, napi_callback_info info) {
-    // Implementation needed
-    return NULL;
-}
+  size_t argc = 1;
+  napi_value args[1], undefined;
+  napi_valuetype type;
 
-NAPI_MODULE(NODE_GYP_MODULE_NAME, Init) 
+  napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+  napi_typeof(env, args[0], &type);
+  if (type != napi_function) {
+    napi_throw_type_error(env, NULL, "Expected a function");
+    return NULL;
+  }
+  if (g_complete_callback_ref) napi_delete_reference(env, g_complete_callback_ref);
+  napi_create_reference(env, args[0], 1, &g_complete_callback_ref);
+
+  g_env = env;
+  seq_lead_keys_set_complete_callback(on_complete_sequence);
+
+  napi_get_undefined(env, &undefined);
+  return undefined;
+}
