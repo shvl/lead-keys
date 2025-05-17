@@ -14,8 +14,9 @@ keyListener.addListener("command", (sequence: string) => {
     robot.keyTap("v", "command");
   }
   if (sequence === "abc") {
-    // map to hotkey cmd+shift+d
-    robot.keyTap("d", ["command", "shift"]);
+    // type sample text
+    robot.typeString("hello world 🌍");
+    robot.keyTap("enter");
   }
 });
 
