@@ -2,11 +2,15 @@
   "name": "seq-lead-keys",
   "version": "1.0.0",
   "description": "A library for listening to command key sequences",
-  "main": "src/js/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "install": "node-gyp rebuild",
+    "install": "node-gyp rebuild && npm run build",
     "test": "jest",
-    "build:cli": "gcc -Wall -Wextra -framework ApplicationServices -framework CoreFoundation -o build/seq-lead-keys src/native/cmd.c src/native/seq_lead_keys.c src/native/command_tree.c src/native/parse_args.c"
+    "build:cli": "gcc -Wall -Wextra -framework ApplicationServices -framework CoreFoundation -o build/seq-lead-keys src/native/cmd.c src/native/seq_lead_keys.c src/native/command_tree.c src/native/parse_args.c",
+    "build": "tsc",
+    "build:watch": "tsc -w",
+    "clean": "rimraf dist"
   },
   "keywords": [
     "keyboard",
@@ -20,7 +24,10 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "robotjs": "^0.6.0"
+    "robotjs": "^0.6.0",
+    "typescript": "^5.3.3",
+    "rimraf": "^5.0.5",
+    "@types/node": "^20.11.19"
   },
   "gypfile": true
 }

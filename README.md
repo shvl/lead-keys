@@ -42,6 +42,12 @@ npm install seq-lead-keys
 
 ### As a Node.js module
 
+While primarily a command-line tool, seq-lead-keys can also be used as a Node.js module in Electron apps.
+
+```bash
+npm install seq-lead-keys
+```
+
 ```javascript
 const SeqLeadKeys = require("seq-lead-keys");
 const robot = require("robotjs");

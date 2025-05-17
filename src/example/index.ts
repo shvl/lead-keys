@@ -1,8 +1,9 @@
 import robot from "robotjs";
-import SeqLeadKeys from "../src/js/index.js";
+import SeqLeadKeys from "../index";
 
 const keyListener = new SeqLeadKeys();
-keyListener.addListener("command", (sequence) => {
+
+keyListener.addListener("command", (sequence: string) => {
   console.log("command", sequence);
   if (sequence === "c") {
     // map to hotkey cmd+v
@@ -18,8 +19,7 @@ keyListener.addListener("command", (sequence) => {
   }
 });
 
-keyListener.on("command-partial", (sequence) => {
-  console.log("command-partial", sequence);
+keyListener.on("command-partial", (sequence: string) => {
   console.log("command-partial", sequence);
 });
 
@@ -30,13 +30,17 @@ keyListener.on("lead", () => {
 keyListener.addCommand("c");
 keyListener.addCommand("v");
 keyListener.addCommand("abc");
+
 try {
   keyListener.start();
 } catch (error) {
   console.error(error);
 }
 
-while (true) {
-  console.log("waiting...");
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-}
+// Using async IIFE to handle the infinite loop
+(async () => {
+  while (true) {
+    console.log("waiting...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+})();
