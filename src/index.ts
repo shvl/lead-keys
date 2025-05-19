@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 // @ts-ignore
-import addon from "../build/Release/seq-lead-keys.node";
+import addon from "../build/Release/lead-keys.node";
 
 interface NativeAddon {
   setLeadCallback: (callback: (sequence: string) => void) => void;

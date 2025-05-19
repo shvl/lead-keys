@@ -1,4 +1,4 @@
-declare module "../build/Release/seq-lead-keys.node" {
+declare module "../build/Release/lead-keys.node" {
   export function setLeadCallback(cb: (sequence: string) => void): void;
   export function setPartialCallback(cb: (sequence: string) => void): void;
   export function setCompleteCallback(cb: (sequence: string) => void): void;

@@ -1,6 +1,6 @@
 {
   "targets": [{
-    "target_name": "seq-lead-keys",
+    "target_name": "lead-keys",
     "sources": [
       "src/native/addon.c",
       "src/native/seq_lead_keys.c",

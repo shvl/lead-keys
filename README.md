@@ -1,4 +1,4 @@
-# seq-lead-keys
+# lead-keys
 
 A library for listening to command key sequences on macOS.
 
@@ -35,21 +35,21 @@ Here ⌘ ⌘ Q invokes “quick action,” while 1 or 2 selects specific sub-act
 ## Installation
 
 ```bash
-npm install seq-lead-keys
+npm install lead-keys
 ```
 
 ## Usage
 
 ### As a Node.js module
 
-While primarily a command-line tool, seq-lead-keys can also be used as a Node.js module in Electron apps.
+While primarily a command-line tool, lead-keys can also be used as a Node.js module in Electron apps.
 
 ```bash
-npm install seq-lead-keys
+npm install lead-keys
 ```
 
 ```javascript
-const SeqLeadKeys = require("seq-lead-keys");
+const SeqLeadKeys = require("lead-keys");
 const robot = require("robotjs");
 
 const keyListener = new SeqLeadKeys();
@@ -90,7 +90,7 @@ keyListener.stop();
 npm run build:cli
 
 # Run the tool
-./build/seq-lead-keys -c abc -c xyz
+./build/lead-keys -c abc -c xyz
 ```
 
 ## Development
@@ -113,7 +113,7 @@ npm run build:cli
 npm run build:cli
 
 # Run the tool
-./build/seq-lead-keys -c abc -c xyz
+./build/lead-keys -c abc -c xyz
 ```
 
 ### Testing
